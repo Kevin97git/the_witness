@@ -1,0 +1,1 @@
+[2024-04-19 23:42:48.253069]class line, __init__, unexpected values of arguments p1, p2: <paint.point object at 0x000001EC2FAE9310>;<paint.point object at 0x000001EC2832A310>

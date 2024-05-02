@@ -1,0 +1,17 @@
+{
+    "width": 600,
+    "height": 600,
+    "up_down_bording": 50,
+    "line_width": 6,
+    "part_mark_color": [
+        [102, 127, 153],
+        [208, 216, 224],
+        [127, 128, 160],
+        [135, 151, 117],
+        [159, 146, 173],
+        [146, 121, 107]
+    ],
+    "single_icon_size": 0.6,
+    "shapes": ["TT_TF_TF", "TT_TF", "TT_TT", "TF_TT_TF"],
+    "shape_length_minimum": 4
+}
