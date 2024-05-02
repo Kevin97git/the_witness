@@ -149,56 +149,8 @@ parts = reset(1, 114514)
 #         sub_sub_p.pop(ind)
 #     return res
 
-match_item_type = tuple[shape, vec2, grid]
-match_end_type  = list [match_item_type]
-shape_prob_type = tuple[shape, vec2]
-# (match end: have the same shape, prob, len(match_end))
-state_item_type = tuple[list[match_item_type], list[shape_prob_type], int]
-def _match(g:grid, 
-           prob:list[shape_prob_type], 
-           prefix:list = [],
-           length:int  = 0
-    )->list[state_item_type]: 
-    res: list[state_item_type] = []
-    # foreach probabilities in order to match by
-    for s in prob:
-        me = g.match_prefix(s, prefix=prefix)
 
-        # tmp = prob - s
-        tmp = copy(prob); tmp.remove(s)
-        res += [(mee, tmp, length) for mee in me]
-    shuffle(res)
-    return res
 
-def match(g:grid):
-    # [
-    #  (what list we're foreach-ing: [MET, ...], 
-    #   what shape may be matched,
-    #   length)]
-    state: list[state_item_type] = []
-    prob : list[shape_prob_type] = []
-    # where we are
-    ind  : int = -1
-    # get prob
-    mel: list[match_item_type] = []
-    for s in all_shape():
-        # me: only one shape
-        me, sprob = g.match(s)
-        prob += sprob
-        mel += me
-    for e in mel:
-        tmp = copy(prob); tmp.remove((e[0], e[1]))
-        state.append((e, tmp, 1))
-    
-    while True:
-        now  = state[-1][0][0]
-        prob = state[-1][1]
-        res  = _match(now, prob, prefix=state[-1][0], length=state[-1][2]+1)
-        if res == []: state.pop(); continue
-        else:
-            if res[-1][2] >= shape_length_minimum:
-                return res
-            state += res
         
     # while True:
     #     res, rprob = _match(g, prob, now)

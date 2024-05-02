@@ -3,8 +3,11 @@ from copy import copy
 from functools import cmp_to_key
 from itertools import groupby
 from sys import _getframe
+from colorama import Fore, init
+import pprint
+init(True)
 
-from paint import point, line, vec2, set_a, loop, square, main_draw, grid, shapes, shape, once
+from paint import point, line, vec2, set_a, loop, square, main_draw, grid, shapes, shape, once, all_shape, shape_length_minimum
 from config_save_error import raise_error
 
 # config
@@ -27,8 +30,8 @@ probabilities = {}
 # probabilities include const
 LPN = 'line_passed_number: '
 PI = 'part_index: '
-SU = 'shape_unrotatable: '
-SR = 'shape_rotatabele: ' # isn't rotated yet
+SU = Fore.RED+'shape_unrotatable: '+Fore.RESET
+SR = Fore.RED+'shape_rotatabele: '+Fore.RESET # isn't rotated yet
 
 def path_sidesway(l: line):
     while True:
@@ -74,6 +77,7 @@ def list_compare(x:square, y:square):
         else: return -1
 def destribute(l1:list, l2:list):
     return [l1+[e] for e in l2]
+# region
 # def _match(g, prefix=[]):
 #     on = g.one_num()
 #     sub_sub_p = []
@@ -99,23 +103,102 @@ def destribute(l1:list, l2:list):
 #     sub_sub_p = _match(last[-1][2], prefix=last)
 #     return sub_sub_p
 
-def _match(g, prefix=[]): 
-    on = g.one_num()
-    sub_sub_p = []
-    # get probabelities with one new shape
-    for _s in shapes:
-        for rt in range(1 if shape.rotate_the_same(_s) else 4):
-            if sum([sum(i) for i in _s]) > on: continue
-            me = g.match_prefix(shape(_s, rt), prefix)
-            sub_sub_p += me
-    if sub_sub_p == []: return []
-    res = []
-    print(len(prefix))
-    while res == [] and len(sub_sub_p) != 0:
-        ind = randint(0, len(sub_sub_p )-1)
-        res = _match(sub_sub_p[ind][-1][2], sub_sub_p[ind])
-        sub_sub_p.pop(ind)
+# def _match(g, prefix=[]): 
+#     on = g.one_num()
+#     sub_sub_p = []
+#     # get probabelities with one new shape
+#     for _s in shapes:
+#         for rt in range(1 if shape.rotate_the_same(_s) else 4):
+#             if sum([sum(i) for i in _s]) > on: continue
+#             me = g.match_prefix(shape(_s, rt), prefix)
+#             sub_sub_p += me
+#     if sub_sub_p == []: return []
+#     res = []
+#     print(len(prefix))
+#     while res == [] and len(sub_sub_p) != 0:
+#         ind = randint(0, len(sub_sub_p )-1)
+#         res = _match(sub_sub_p[ind][-1][2], sub_sub_p[ind])
+#         sub_sub_p.pop(ind)
+#     return res
+# endregion
+
+match_item_type = tuple[shape, vec2, grid]
+match_end_type  = list [match_item_type]
+shape_prob_type = tuple[shape, vec2]
+# (match end: have the same shape, prob, len(match_end))
+state_item_type = tuple[list[match_item_type], list[shape_prob_type], int]
+
+def _remove(l:list, item) -> list:
+    l.remove(item)
+    return l
+# get a state-like object to be added into state
+def _match(g:grid, 
+           prob:list[shape_prob_type], 
+           prefix:list = [],
+           length:int  = 0
+    )->list[state_item_type]: 
+    print('_match g:', g, 'prob:', prob if len(prob) < 8 else len(prob), 'len_prefix:', len(prefix), 'length:', length)
+    res: list[state_item_type] = []
+    # foreach probabilities in order to match by
+    for s in prob:
+        me, rprob = g.match_prefix(s, prefix=prefix)
+        # rprob: all probabilities for matching g
+        if me == []: continue
+        res += [(mee, _remove(rprob, s), length) for mee in me if rprob != [s]] # delete matched
+    shuffle(res)
     return res
+
+def match(g:grid):
+    # [
+    #  (what list we're foreach-ing: [MET, ...], 
+    #   what shape may be matched,
+    #   length)]
+    state: list[state_item_type] = []
+    prob : list[shape_prob_type] = []
+    maximum = []
+    maximum_len = 0
+    # init prob
+    mel: list[match_item_type] = []
+    for s in all_shape():
+        # me: only one shape
+        me, sprob = g.match(s)
+        prob += sprob
+        mel += me
+    if mel == []: print('kinda interesting.'); return []
+    # length equals to 1
+    maximum = choice(mel)
+    maximum_len = 1
+    for e in mel:
+        tmp = copy(prob); tmp.remove((e[-1][0], e[-1][1]))
+        state.append((e, tmp, 1))
+    print('prob init.\nloop begins')
+    
+    while True:
+        state_now = state[-1]
+        state.pop()
+        prob = state_now[1]       # what the grid may include
+        if prob == []:
+            assert False
+            print('prob == [], state:', state if len(state) < 8 else len(state))
+            state.pop()
+            continue
+        now  = state_now[0][0][2] # what to match
+        res  = _match(now, prob, prefix=state_now[0], length=state_now[2]+1)
+        if res == []: # match nothing
+            print('match nothing')
+            # state.pop()
+            if state == []: print('match return max:', maximum); return maximum
+            continue
+        else:
+            print('-----match sth-----')
+            if res[-1][2] >= shape_length_minimum:
+                print('match return:', res)
+                return res
+            if res[-1][2] > maximum_len:
+                maximum_len = res[-1][2]
+                maximum = res[-1]
+            state += res
+
 def _sub_pro_eq(a, b):
     if a == [] or b == []:
         return False
@@ -177,25 +260,16 @@ def reset(seed1, seed2):
     parts = []
     while len(cpy_asv) != 0:
         s:square = cpy_asv[0]
-        # print('cpyasv loop', s)
         n = s.near_samep()
         n.append(s)
         done = [s]
         while len(n) != len(done):
-            # print('n', len(n))
-            # for i in n:
-            #     print(i)
             i = 0
             for i in range(len(n)):
                 if not n[i] in done: break
-            # else:
-                # print('errorrrrr')
-            # print('by', n[i])
-            # for e in n[i].near_samep():
             done.append(n[i])
             n+=n[i].near_samep(); n = list(set(n))
             i = 0
-                # if not e in n: n.append(e)
         for e in n:
             cpy_asv.remove(e)
         n.sort(key=cmp_to_key(list_compare))
@@ -208,7 +282,7 @@ def reset(seed1, seed2):
             if ind <= 5:
                 probabilities[e.pos].append((PI, ind))
         g = grid(p)
-        sub_pro = _match(g)
+        sub_pro = match(g)
 
         # region
         # done = [[]]
@@ -289,20 +363,31 @@ def reset(seed1, seed2):
             # if len(list(set(xxx))) != len(xxx):
             #     print('xxx')
         # endregion
+        # TODO
         if sub_pro != []:
-            sub_pro = choice(sub_pro)
-            cpy_sp = copy(sub_pro)
-            sub_pro = []
-            for i in cpy_sp:
-                _once = once(i)
-                sub_pro.append((SU, _once))
-                sub_pro.append((SR, _once))
+            print(sub_pro)
+            tmp = []
+            for i in sub_pro:
+                _once = once(i[:2])
+                tmp.append((SU, _once))
+                tmp.append((SR, _once))
                 
             for squ in p:
-                probabilities[squ.pos] += sub_pro
+                probabilities[squ.pos] += tmp
 
+    # _print = print
+    # print = pprint.pprint
     print(parts)
-    print(probabilities)
+    # print(str(probabilities))
+    for k in probabilities:
+        print(k, ':[', sep='', end='\n    ')
+        for t in probabilities[k]:
+            print('(', end='')
+            for o in t:
+                print(o, end=',')
+            print('),\n    ', end='')
+        print('],')
+    # print = _print
     for y in range(a):
         string = ''
         for x in range(a):

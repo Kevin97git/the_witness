@@ -356,6 +356,7 @@ def all_shape():
         for rt in range(1 if shape.rotate_the_same(_s) else 4):
             res.append(shape(_s, rt))
     return res
+shape_prob_type = tuple[shape, vec2]
 class grid:
     def __init__(self, part:list):
         self.l = [[(1 if square(vec2(x, y)) in part else 0) for x in range(a)] for y in range(a)]
@@ -376,25 +377,35 @@ class grid:
     #     return True
     def n_include(self, what, target):
         return what[what == target].shape == (0,)
-    def match(self, s: shape) -> tuple[list[tuple[shape, vec2, Self]], list[tuple[shape, vec2]]]:
+    def match(self, s: shape) -> tuple[list[list[tuple[shape, vec2, Self]]], list[tuple[shape, vec2]]]:
         res = []
         rprob = []
         for y in range(a + 1 - s.height):
             for x in range(a + 1 - s.width):
-                se = self - s.as_grid(x, y)
+                se = self - s.to_grid(x, y)
                 if se[se == -1].shape == (0,): 
                     res.append([(s, vec2(x, y), grid.by_l(se))])
                     rprob.append((s, vec2(x, y)))
 
         return (res, rprob)
-    def match_prefix(self, s: shape, prefix:list):
+    # def match_prefix(self, s: shape, prefix:list) -> tuple[list[list[tuple[shape, vec2, Self]]], list[tuple[shape, vec2]]]:
+    #     res = []
+    #     rprob = []
+    #     for y in range(a + 1 - s.height):
+    #         for x in range(a + 1 - s.width):
+    #             se = self - (s.to_grid(x, y))
+    #             if se[se == -1].shape == (0,): 
+    #                 res.append(prefix + [(s, vec2(x, y), grid.by_l(se))])
+    #                 rprob.append((s, vec2(x, y)))
+    #     return (res, rprob)
+    def match_prefix(self, s: shape_prob_type, prefix:list) -> tuple[list[list[tuple[shape, vec2, Self]]], list[tuple[shape, vec2]]]:
         res = []
-        for y in range(a + 1 - s.height):
-            for x in range(a + 1 - s.width):
-                se = self - (s.to_grid(x, y))
-                if se[se == -1].shape == (0,): 
-                    res.append(prefix + [(s, vec2(x, y), grid.by_l(se))])
-        return res
+        rprob = []
+        se = self - (s[0].to_grid(s[1].x, s[1].y))
+        if se[se == -1].shape == (0,): 
+            res.append(prefix + [(s[0], s[1], grid.by_l(se))])
+            rprob.append((s[0], s[1]))
+        return (res, rprob)
     def one_num(self):
         return self.l.sum()
     # @lru_cache
