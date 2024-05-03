@@ -7,8 +7,8 @@ from colorama import Fore, init
 import pprint
 init(True)
 
-from paint import point, line, vec2, set_a, loop, square, main_draw, grid, shapes, shape, once, all_shape, shape_length_minimum
-from config_save_error import raise_error
+from paint_classes import point, line, vec2, set_a, loop, square, main_draw, grid, shapes, shape, once, all_shape, shape_length_minimum
+from config_save_error import raise_error, log
 
 # config
 A_MAX = 8
@@ -220,6 +220,7 @@ def reset(seed1, seed2):
     global a
     # rand
     seed(seed1 ^ seed2)
+    log(f'reset: seed1={seed1}, seed2={seed2}, mix={seed1^seed2}')
     a = randint(A_MIN, A_MAX)
     set_a(a)
     square.set_by_a(a)
@@ -363,7 +364,6 @@ def reset(seed1, seed2):
             # if len(list(set(xxx))) != len(xxx):
             #     print('xxx')
         # endregion
-        # TODO
         if sub_pro != []:
             print(sub_pro)
             tmp = []
@@ -395,7 +395,8 @@ def reset(seed1, seed2):
                 if square(vec2(x, y)) in sl:
                     string += str(ind)
         print(' '.join(string))
-    loop()
     # debug_print_all_line()
+    log('reset end.')
 
-reset(1, 361886424832)
+reset(1, 1919810)
+loop()

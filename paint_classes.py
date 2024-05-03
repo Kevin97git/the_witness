@@ -13,7 +13,11 @@ import sys
 import config_save_error as cse
 config = cse.get_config()
 
-vec2 = namedtuple('vec2', 'x y')
+# vec2 = namedtuple('vec2', 'x y')
+class vec2(namedtuple('vec2_super', 'x y')):
+    __slots__ = ()
+    def __repr__(self):
+        return f'v({self.x}, {self.y})'
 # view_vec = namedtuple('view_vec', 'x y')
 class view_vec(namedtuple('view_vec_super', 'x y')):
     __slots__ = ()
@@ -60,6 +64,12 @@ def pos_to_view_pos(pos:vec2):
     )
 p2vp = pos_to_view_pos
 shape_length_minimum = config["shape_length_minimum"]
+
+#debug
+next_id = 0
+def get_id():
+    global next_id
+    return (next_id := next_id+1)
 
 # def view_vec_sub(a, b):
 #     return view_vec(a.x - b.x, a.y - b.y)
@@ -296,7 +306,6 @@ class square:
     def all(cls):
         return all_square
 
-
 shapes: List[List[List[int]]] = []
 config_shapes: List[str] = config["shapes"]
 for s in config_shapes:
@@ -313,10 +322,11 @@ class once:
     def __init__(self, obj):
         self.obj = obj
         self.available = True
+        self.id = get_id()
     def use(self):
         self.available = False
     def __repr__(self):
-        return repr(self.obj)
+        return str(self.id)+repr(self.obj)
     
 # rotate = lambda l:np.array([[l[-j-1, i] for j in range(l.shape[0])] for i in range(l.shape[1])])
 rotate = lambda a:a.transpose()[::-1]
