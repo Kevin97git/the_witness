@@ -1,7 +1,7 @@
 {
     "width": 600,
     "height": 600,
-    "up_down_bording": 50,
+    "top_bottom_border": 50,
     "line_width": 6,
     "part_mark_color": [
         [102, 127, 153],
@@ -11,7 +11,37 @@
         [159, 146, 173],
         [146, 121, 107]
     ],
+    "back_ground_color": [27, 44, 61],
+    "line_color": {
+        "line_must_pass": [223, 240, 201],
+        "simple": [221, 218, 213],
+        "line_cannot_pass": [27, 44, 61],
+        "draw": [237, 215, 176]
+    },
     "single_icon_size": 0.6,
     "shapes": ["TT_TF_TF", "TT_TF", "TT_TT", "TF_TT_TF"],
-    "shape_length_minimum": 4
+    "shape_length_minimum": 4,
+    "cmd_read_max": 10,
+    "puzzle_generate_timeout": 30,
+    "a_max": 8,
+    "a_min": 5,
+    "seed_mix_method": "XOR",
+    "tick_rate": 30,
+    "puzzle_square_proportion": 0.5,
+    "puzzle_line_proportion_min": 0.1,
+    "puzzle_line_proportion_max": 0.3,
+    "start|end_point_length": 2,
+    "rect_border_radius": 6,
+    "square_split_number": 5,
+    "icon_item_distance": {
+        "triangle": 0.1, 
+        "shapes": 0.05
+    },
+    "icon_triangle_color": [212, 184, 100],
+    "icon_shape_rotatable_color": [147, 236, 176],
+    "icon_shape_unrotatable_color": [176, 229, 237],
+    "icon_shape_rotatable_angle": 10,
+    "log_max_line_count": 300,
+    "mouse_collide_radius": 0.2,
+    "mouse_movement_deciding_angle": 30
 }
