@@ -24,19 +24,13 @@ class vec2(namedtuple('vec2_super', 'x y')):
 # view_vec = namedtuple('view_vec', 'x y')
 class view_vec(namedtuple('view_vec_super', 'x y')):
     __slots__ = ()
-    def __new__(cls, x, y):
-        return super().__new__(cls, int(x), int(y))
-    def __sub__(self, other):
-        return view_vec(self.x - other.x, self.y - other.y)
-    def __add__(self, other):
-        return view_vec(self.x + other.x, self.y + other.y)
-    def __mul__(self, other):
-        return view_vec(self.x * other, self.y * other)
-    def to_tuple(self):
-        return (self.x, self.y)
+    def __new__(cls, x, y):   return super().__new__(cls, int(x), int(y))
+    def __sub__(self, other): return view_vec(self.x - other.x, self.y - other.y)
+    def __add__(self, other): return view_vec(self.x + other.x, self.y + other.y)
+    def __mul__(self, other): return view_vec(self.x * other, self.y * other)
+    def to_tuple(self): return (self.x, self.y)
     @property
-    def slope(self):
-        return self.y / self.x if self.x != 0 else math.inf
+    def slope(self): return self.y / self.x if self.x != 0 else math.inf
 '''
 O ---- x
 |
@@ -55,12 +49,13 @@ def set_a(_a: int):
     a = _a
     unit = int(((wheight - tb_border*2) - (a + 1) * LINE_WIDTH) / a)
 
+def tuple_sum(a:tuple[int|float, int|float], b:tuple[int|float, int|float]): return (a[0] + b[0], a[1] + b[1])
 def pos_to_view_pos(pos:vec2):
     return view_vec(
         x=content_0_0.x+pos.x*unit+pos.x*LINE_WIDTH+LINE_WIDTH,
         y=content_0_0.y+pos.y*unit+pos.y*LINE_WIDTH+LINE_WIDTH
     )
-def pos_to_view_pos_offset(pos:vec2, offset: tuple[int, int]=(0, 0)): # for line.draw
+def pos_to_view_pos_offset(pos:vec2, offset: tuple[int, int]=(0, 0)): # for line.draw etc.
     return view_vec(
         x=content_0_0.x+pos.x*unit+pos.x*LINE_WIDTH + int(offset[0]),
         y=content_0_0.y+pos.y*unit+pos.y*LINE_WIDTH + int(offset[1])
@@ -166,8 +161,7 @@ class line:
         if p1.x > p2.x or p1.y > p2.y: return cls(p2, p1)
         assert False
     @classmethod
-    def by_id(cls, _id):
-        return all_line[_id]
+    def by_id(cls, _id): return all_line[_id]
     @classmethod
     def all(cls): return all_line
     @classmethod
@@ -205,21 +199,25 @@ class line:
         if point(self.pos1).near_line_is_simple() == []:
             return (0, 0)
         return (LINE_WIDTH, 0) if self.horizonal else (0, LINE_WIDTH)
-    @property_cache
+    @property # never cache this!
     def progress_offset(self):
-        return (self.draw_progress - LINE_WIDTH, 0) \
-               if self.horizonal                    \
-               else (0, self.draw_progress - LINE_WIDTH)
+        return tuple_sum(((self.draw_progress, 0) \
+                          if self.horizonal       \
+                          else (0, self.draw_progress)), 
+                         self.draw_offset)
     def draw(self, surface):
         draw_line(surface, line_color[self.type], 
                   p2vpo(self.pos1, self.draw_offset).to_tuple(), 
                   p2vpo(self.pos2).to_tuple(),
                   LINE_WIDTH, self.horizonal)
+        if self.draw_progress == 0: 
+            assert p2vpo(self.pos1, self.draw_offset).to_tuple() == p2vpo(self.pos1, self.progress_offset).to_tuple()
+            return
         draw_line(surface, line_color['draw'], 
                   p2vpo(self.pos1, self.draw_offset).to_tuple(), 
                   p2vpo(self.pos1, self.progress_offset).to_tuple(),
                   LINE_WIDTH, self.horizonal)
-        print('--------', self.draw_progress, '--------')
+        print(self, self.draw_progress, p2vpo(self.pos1, self.draw_offset).to_tuple(), p2vpo(self.pos1, self.progress_offset).to_tuple())
     def draw_by(self, color, surface):
         assert False
         draw_line(surface, color, 
@@ -251,6 +249,7 @@ class line:
                      direction:Literal['up']|Literal['down']|Literal['left']|Literal['right'], 
                      num) -> Literal[1]|Literal[-1]|Self:
         if self.type == 'line_cannot_pass': return -1
+        print('SET_PROGRESS add', num, 'to', self.draw_progress, 'of', self, 'direct', direction)
         self.draw_progress += num
         if self.draw_progress <= 0:
             self.draw_progress = 0
@@ -451,6 +450,7 @@ class grid:
     # @lru_cache
     def __repr__(self):
         return '_'.join([''.join(['T' if self.l[y, x] == 1 else 'F' for x in range(a)]) for y in range(a)])
+# region puzzle draw
 def draw_triangle(surface, A: view_vec, B: view_vec, C: view_vec, color):
     gfxdraw.aatrigon(surface, A.x, A.y, B.x, B.y, C.x, C.y, color)
     gfxdraw.filled_trigon(surface, A.x, A.y, B.x, B.y, C.x, C.y, color)
@@ -497,7 +497,7 @@ def LPN_draw(arg:int, s:square, surface: pygame.surface.Surface):
     # res = surface_scale(scale_surface)
     # surface.blit(res, p2vp(s.pos))
 def PI_draw(arg:int, s:square, surface):
-    print('pi_draw')
+    # print('pi_draw')
     _draw_radius_border_rect(PI_color[arg], 
         p2vpo(s.pos, ((1-SIS)*unit/2+LINE_WIDTH, (1-SIS)*unit/2+LINE_WIDTH)), 
         SIS*unit, SIS*unit, surface)
@@ -555,8 +555,10 @@ line_id = str
 puzzle_square_type = dict[vec2, square_content]
 puzzle_line_type = dict[line_id, line_type]
 puzzle_type = tuple[puzzle_square_type, puzzle_line_type]
+last_mouse_pos = view_vec(0, 0)
 def set_by_puzzle(puzzle: puzzle_type, p_start, p_end):
-    global point_start, point_end
+    'set square and line object by puzzle to draw and sth'
+    global point_start, point_end, last_mouse_pos
     ps, pl = puzzle
     for s in ps:
         square(s).set_content(ps[s])
@@ -564,6 +566,7 @@ def set_by_puzzle(puzzle: puzzle_type, p_start, p_end):
         line.by_id(l).set_type(pl[l])
     point_start = p_start
     point_end = p_end
+    last_mouse_pos = p2vpo(point_start, (LINE_WIDTH/2, LINE_WIDTH/2))
 def start_point_draw(surface):
     tmp = p2vpo(point_start, (-LINE_WIDTH*special_point_length, 0))
     draw.rect(surface, line_color['line_must_pass'], 
@@ -584,21 +587,77 @@ def main_draw(surface):
         s = all_square[k]
         if s.content:
             _content_type = s.content[0]
-            print(_content_type)
+            # print(_content_type)
             if not _content_type in puzzle_draw:
                 print('-_-continue')
                 continue
             puzzle_draw[_content_type](s.content[1], s, surface)
     pygame.display.flip()
+# endregion
 # last_mouse_pos = view_vec(0, 0)
+direction: Literal['horizonal', 'vertical']|None = None
+now_line: line = None
 set_visible = pygame.mouse.set_visible
 set_grab = pygame.event.set_grab
 get_grab = pygame.event.get_grab
-last_mouse_pos = content_0_0 + view_vec(LINE_WIDTH/2, LINE_WIDTH/2)
-direction: Literal['horizonal']|Literal['vertical']|None = None
-now_line: line = None
-def event_loop():
+psr = lambda: line(point(point_start), point(point_start).right_obj)
+psd = lambda: line(point(point_start), point(point_start).down_obj)
+psu = lambda: line(point(point_start), point(point_start).up_obj)
+def on_mouse_move(now_mouse_pos: view_vec):
     global last_mouse_pos, direction, now_line
+    d = now_mouse_pos - last_mouse_pos
+    if d == view_vec(0, 0): return
+    for p in all_point:
+        if all_point[p].collide(now_mouse_pos): # at turning
+            print('at', p, MMDA, 'slope', d.slope)
+            if d.slope < MMDA: # horizonal
+                last_mouse_pos += view_vec(d.x, 0)
+                direction = 'horizonal'
+                progress = d.x
+                # if now_line is None:
+                now_line = psr()
+                # TODO may(in all probability) clear passed(expected) line!
+                psd().draw_progress = 0
+                psu().draw_progress = 0
+            elif d.slope > (1 / MMDA): # vertical
+                # TODO negitive slope
+                last_mouse_pos += view_vec(0, d.y)
+                direction = 'vertical'
+                progress = d.y
+                # if now_line is None:
+                if progress > 0:
+                    now_line = psd()
+                    psr().draw_progress = 0
+                    psu().draw_progress = 0
+                else:
+                    now_line = psu()
+                    psr().draw_progress = 0
+                    psd().draw_progress = 0
+            else: print('miss', end=''); continue
+            print('prog:', progress, 'd: ', d, 'direction', direction, 'now_line', now_line)
+            break
+    else: # not at turning
+        print('=', end='')
+        if direction == 'horizonal':
+            last_mouse_pos += view_vec(d.x, 0)
+            progress = d.x
+        elif direction == 'vertical':
+            last_mouse_pos += view_vec(0, d.y)
+            progress = d.y
+        else: assert False
+    res = now_line.set_progress(
+        ('up' if progress < 0 else 'down')
+        if direction!='horizonal'
+        else ('left' if progress < 0 else 'right'), 
+        progress
+    )
+    if res == 1: pass# work well
+    elif res == -1: pass# line cannot pass
+    elif res: # line
+        now_line = res
+    else: # not exist
+        if now_line.right_is_end(): return 'END'
+def event_loop() -> (Literal['EXIT', 'NEXT', 'MOUSE_UNLOCK', 'DRAW_UPDATE'] | None):
     for event in pygame.event.get():
         if event.type == pygame.locals.QUIT:
             return 'EXIT'
@@ -613,54 +672,9 @@ def event_loop():
                     return 'MOUSE_UNLOCK'
         if event.type == pygame.locals.MOUSEMOTION:
             if any(pygame.mouse.get_pressed()):
-
                 x, y = pygame.mouse.get_pos()
-                now_mouse_pos = view_vec(x, y)
-                d = now_mouse_pos - last_mouse_pos
-                for p in all_point:
-                    if all_point[p].collide(now_mouse_pos): # at turning
-                        print('at')
-                        if d.slope < MMDA: # horizonal
-                            last_mouse_pos += view_vec(d.x, 0)
-                            direction = 'horizonal'
-                            progress = d.x
-                            if now_line is None:
-                                now_line = line(point(point_start), point(point_start).right_obj)
-                        elif d.slope > (1 / MMDA): # vertical
-                            last_mouse_pos += view_vec(0, d.y)
-                            direction = 'vertical'
-                            progress = d.y
-                            if now_line is None:
-                                if progress > 0:
-                                    now_line = line(point(point_start), point(point_start).down_obj)
-                                else:
-                                    now_line = line(point(point_start), point(point_start).up_obj)
-                        else: print('miss', end=''); continue
-                        print('prog:', progress)
-                        print('d: ', d)
-                        break
-                else: # not at turning
-                    print('=', end='')
-                    if direction == 'horizonal':
-                        last_mouse_pos += view_vec(d.x, 0)
-                        progress = d.x
-                    elif direction == 'vertical':
-                        last_mouse_pos += view_vec(0, d.y)
-                        progress = d.y
-                res = now_line.set_progress(
-                    ('up' if progress < 0 else 'down')
-                    if direction=='horizonal'
-                    else ('left' if progress < 0 else 'right'), 
-                progress)
-                if res == 1: # work well
-                    pass
-                elif res == -1: # line cannot pass
-                    pass
-                elif res: # line
-                    now_line = res
-                else: # not exist
-                    if now_line.right_is_end(): return 'END'
-
+                on_mouse_move(view_vec(x, y))
+                return 'DRAW_UPDATE'
             # last_mouse_pos = now_mouse_pos
         pygame.mouse.set_pos(last_mouse_pos)
 

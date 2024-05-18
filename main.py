@@ -363,6 +363,8 @@ def game_loop(puzzle: puzzle_type, a: int, p_start:vec2, p_end:vec2, surface):
                 set_visible(False)
                 set_grab(True)
                 log('set visible=False, grab=True')
+        if cmd == 'DRAW_UPDATE':
+            main_draw(surface)
         # main_draw(surface)
         main_clock.tick(TICK)
 
