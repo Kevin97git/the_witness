@@ -43,5 +43,6 @@
     "icon_shape_rotatable_angle": 10,
     "log_max_line_count": 300,
     "mouse_collide_radius": 0.2,
-    "mouse_movement_deciding_angle": 30
+    "mouse_movement_deciding_angle": 30,
+    "once_available_max_mouse_move": 0.05
 }

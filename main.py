@@ -26,15 +26,6 @@ from constant_type import *
 def _rand(a: int, b: int): return randint(a, b-1)
 def _rand_bool(a:int, b:int): return 0 in choices([i for i in range(b)], k=a)
 
-#debug
-# def debug_print_all_line():
-#     for k in line.all():
-#         if line.all()[k].exist:
-#             print(k)
-# def debug_flag(): print('flag')
-
-
-
 def path_sidesway(l: line):
     while True:
         if l.horizonal: return False
@@ -77,10 +68,8 @@ def list_compare(x:square, y:square):
     else:
         if x.pos.x > y.pos.x: return 1
         else: return -1
-# def destribute(l1:list, l2:list):
-#     return [l1+[e] for e in l2]
 
-
+# region type
 match_item_type = tuple[shape, vec2, grid]
 match_end_type  = list [match_item_type]
 shape_prob_type = tuple[shape, vec2]
@@ -105,6 +94,7 @@ puzzle_line_type = dict[line_id,
                         |Literal['line_cannot_pass']
                         ]
 puzzle_type = tuple[puzzle_square_type, puzzle_line_type]
+# endregion
 
 def _remove(l:list, item) -> list:
     l.remove(item)
@@ -309,7 +299,7 @@ def _reset(seed1: int, seed2: int) -> tuple[puzzle_type, int, vec2, vec2]:
     puzzle: puzzle_type = (puzzle_square, puzzle_line)
     # TODO CHECK
     square.clear()
-    line.clear()
+    line.clear_alll()
     point.clear()
     log('reset end. prs clear end.')
     return puzzle, a, point_start.pos, point_end.pos
@@ -343,7 +333,7 @@ def call_reset(puzzle_pipe:PipeConnection, timeout=None):
 def game_loop(puzzle: puzzle_type, a: int, p_start:vec2, p_end:vec2, surface):
     set_a(a)
     square.clear()
-    line.clear()
+    line.clear_alll()
     point.clear()
     # print(puzzle, a, p_start, p_end)
     square.set_by_a(a)
@@ -352,19 +342,23 @@ def game_loop(puzzle: puzzle_type, a: int, p_start:vec2, p_end:vec2, surface):
     main_draw(surface)
     while True: # TODO
         cmd = event_loop()
-        if cmd in ('EXIT', 'NEXT', 'END'):
-            return cmd
-        if cmd == 'MOUSE_UNLOCK':
-            if get_grab():
-                set_visible(True)
-                set_grab(False)
-                log('set visible=True, grab=False')
-            else:
-                set_visible(False)
-                set_grab(True)
-                log('set visible=False, grab=True')
-        if cmd == 'DRAW_UPDATE':
-            main_draw(surface)
+        match cmd:
+            case 'EXIT'|'NEXT'|'RESTART'|'END':
+                return cmd
+            case 'MOUSE_UNLOCK':
+                if get_grab():
+                    set_visible(True)
+                    set_grab(False)
+                    log('set visible=True, grab=False')
+                else:
+                    set_visible(False)
+                    set_grab(True)
+                    log('set visible=False, grab=True')
+            case 'DRAW_UPDATE':
+                main_draw(surface)
+            case None: pass
+            case _:
+                assert False
         # main_draw(surface)
         main_clock.tick(TICK)
 
@@ -399,8 +393,9 @@ if __name__ == '__main__':
                     set_grab(False)
                     return
                 if cmd == 'NEXT': continue
-                if cmd == 'END':
+                if cmd == 'END': # reach point end
                     pass
+                if cmd == 'RESTART': return 'RESTART'
             else:
                 seed2 += 1
                 print('timeout')
@@ -428,7 +423,9 @@ if __name__ == '__main__':
         seed1 = randint()
         set_key_val('seed1', seed1)
     seed2 = get_key_val('seed2')
-    new_puzzle_by(seed1=seed1, seed2=seed2, prs=prs, pca=None, surface=main_surface)
+    res = True
+    while res:
+        res = new_puzzle_by(seed1=seed1, seed2=seed2, prs=prs, pca=None, surface=main_surface)
     # seed2 += 1
     # set_key_val('seed2', seed2)
 '''
@@ -449,5 +446,3 @@ call_reset:
     n:  goto game_loop
 
 '''
-# reset(1, 1919810)
-# loop()

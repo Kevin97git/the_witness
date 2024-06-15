@@ -47,6 +47,7 @@ ISRA_sin = math.sin(ISRA)
 ISRA_cos = math.cos(ISRA)
 MCR = config["mouse_collide_radius"]
 MMDA = math.tan(math.radians(config["mouse_movement_deciding_angle"]))
+OAMMM = config["once_available_max_mouse_move"]
 
 
 # probabilities include const

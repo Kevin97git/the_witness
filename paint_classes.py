@@ -6,31 +6,57 @@ import pygame.locals
 from pygame.display import set_caption
 from collections import namedtuple
 from functools import lru_cache
-from typing import List, Any, Self, Literal, Callable
+from typing import List, Any, Self, Literal, Callable, Final
 from copy import copy
 from numpy import ndarray
 import numpy as np
 import math
 import sys
+from colorama import Fore, init, Back
+init(True)
 
 import config_save_error as cse
 from constant_type import *
+import about_mouse as am
 
-# vec2 = namedtuple('vec2', 'x y')
 class vec2(namedtuple('vec2_super', 'x y')):
     __slots__ = ()
     def __repr__(self):
         return f'v({self.x}, {self.y})'
-# view_vec = namedtuple('view_vec', 'x y')
-class view_vec(namedtuple('view_vec_super', 'x y')):
-    __slots__ = ()
-    def __new__(cls, x, y):   return super().__new__(cls, int(x), int(y))
+class view_vec:
+    # __slots__ = ()
+    def __init__(self, x, y):
+        self.x = int(x)
+        self.y = int(y)
     def __sub__(self, other): return view_vec(self.x - other.x, self.y - other.y)
     def __add__(self, other): return view_vec(self.x + other.x, self.y + other.y)
     def __mul__(self, other): return view_vec(self.x * other, self.y * other)
+    def __rmul__(self, other): return view_vec(self.x * other, self.y * other)
+    def __neg__(self): return view_vec(-self.x, -self.y)
+    def __matmul__(self, oth): return self.x * oth + self.y * oth
+    def __getitem__(self, key): return [self.x, self.y][key]
+    def __repr__(self): return f'vv({self.x}, {self.y})'
+    def __eq__(self, oth):
+        try:
+            return self.x == oth.x and self.y == oth.y
+        except:
+            return False
+    def __lt__(self, oth):
+        try: return self.length < oth.length
+        except: return False
+    def __gt__(self, oth):
+        try: return self.length > oth.length
+        except: return False
+    def __ge__(self, oth): return self == oth or self > oth
+    def __hash__(self): return hash((self.x, self.y))
     def to_tuple(self): return (self.x, self.y)
     @property
     def slope(self): return self.y / self.x if self.x != 0 else math.inf
+    @property
+    def length(self): return math.hypot(self.x, self.y)
+    @property
+    def positive(self): return self.x >= 0 and self.y >= 0
+am.set_view_vec(view_vec)
 '''
 O ---- x
 |
@@ -39,8 +65,10 @@ y
 '''
 content_0_0:view_vec = view_vec(x=lr_border, y=tb_border)
 def get_surface():
-    return pygame.display.set_mode(size=(wwidth, wheight), 
+    surf = pygame.display.set_mode(size=(wwidth, wheight), 
                                    flags=0)
+    pygame.key.stop_text_input()
+    return surf
 main_clock = pygame.time.Clock()
 unit = -1
 a:int = -1
@@ -62,30 +90,29 @@ def pos_to_view_pos_offset(pos:vec2, offset: tuple[int, int]=(0, 0)): # for line
     )
 p2vp = pos_to_view_pos
 p2vpo = pos_to_view_pos_offset
+am.set_p2vpo(p2vpo)
 
+# region type hints
 square_content = tuple[Literal['line_passed_number: '], int] \
                  | tuple[Literal['part_index: '], int] \
                  | tuple[Literal['shape_rotatable: '], 'shape'] \
                  | tuple[Literal['shape_unrotatable: '], 'shape']
 content_type = Literal['line_passed_number: ', 'part_index: ', 'shape_rotatable: ', 'shape_unrotatable: ']
 line_type = Literal['line_must_pass'] | Literal['line_cannot_pass'] | Literal['simple']
+# endregion
 #debug
 next_id = 0
 def get_id():
     global next_id
     return (next_id := next_id+1)
 
+
+
 def draw_line(surface, color, start_pos, end_pos, width, horizon) -> pygame.rect.Rect:
     return draw.rect(surface, color, 
                      (start_pos[0], start_pos[1], end_pos[0] - start_pos[0] + width, width)
                      if horizon else (start_pos[0], start_pos[1], width, end_pos[1] - start_pos[1] + width))
 
-def property_cache(f):
-    @property
-    @lru_cache
-    def res(*args, **kwargs):
-        return f(*args, **kwargs)
-    return res
 all_point:dict[vec2, 'point'] = {}
 class point:
     def __new__(cls, pos: vec2):
@@ -113,24 +140,37 @@ class point:
     def clear(cls): global all_point; all_point = {}
     @classmethod
     def set(cls, l): global all_point; all_point = l
+    def __hash__(self): return hash(self.pos)
+    def to_end(self): return self.pos == point_end
     def collide(self, pos: view_vec):
         d = p2vp(self.pos) - pos
         return math.hypot(d.x, d.y) < MCR * unit
     # region near obj
-    @property_cache
+    @property
     def left_obj(self):  return point(vec2(self.x - 1, self.y))
-    @property_cache
+    @property
     def right_obj(self): return point(vec2(self.x + 1, self.y))
-    @property_cache
+    @property
     def up_obj(self):    return point(vec2(self.x, self.y - 1))
-    @property_cache
+    @property
     def down_obj(self):  return point(vec2(self.x, self.y + 1))
     # endregion
+    # region near line
     def near_line(self): return [
-        line(self.up_obj, self), line(self, self.down_obj), 
-        line(self.left_obj, self), line(self, self.right_obj)
+        self.up_line, self.down_line, 
+        self.left_line, self.right_line
     ]
+    # def near_line_by_str(self, str): return eval(f'self.{str}_line()')
+    @property
+    def up_line(self): return line(self.up_obj, self)
+    @property
+    def down_line(self): return line(self, self.down_obj)
+    @property
+    def left_line(self): return line(self.left_obj, self)
+    @property
+    def right_line(self): return line(self, self.right_obj)
     def near_line_is_simple(self): return [l for l in self.near_line() if l and l.type == 'simple']
+    # endregion
 all_line:dict[str, 'line'] = {}
 class line:
     def __new__(cls, p1: point, p2: point):
@@ -151,21 +191,18 @@ class line:
         self.p1 = p1; self.pos1 = p1.pos
         self.p2 = p2; self.pos2 = p2.pos
         self.type: line_type = 'simple'
-        self.draw_progress: int = 0
+        self.draw_progress: am.draw_progress = am.draw_progress.null()
         self.exist = False
-        self.horizonal = (p1.y == p2.y)
+        self.horizonal:bool = (p1.y == p2.y)
         all_line[self.id] = self
-    @classmethod
-    def untidy(cls, p1: point, p2: point):
-        if p1.x < p2.x or p1.y < p2.y: return cls(p1, p2)
-        if p1.x > p2.x or p1.y > p2.y: return cls(p2, p1)
-        assert False
+    def __hash__(self): return hash(self.id)
+    def __eq__(self, oth): return isinstance(oth, line) and self.id == oth.id
     @classmethod
     def by_id(cls, _id): return all_line[_id]
     @classmethod
     def all(cls): return all_line
     @classmethod
-    def clear(cls): global all_line; all_line = {}
+    def clear_alll(cls): global all_line; all_line = {}
     @classmethod
     def set(cls, l): global all_line; all_line = l
     @classmethod
@@ -177,6 +214,7 @@ class line:
             else: off.append(all_line[k])
         return on, off
     
+    # region construct method
     @classmethod
     def from_to(cls, p1: point, p2: point):
         if p1.x == p2.x:
@@ -192,32 +230,25 @@ class line:
         if p1.x < p2.x or p1.y < p2.y: return cls.from_to(p1, p2)
         if p1.x > p2.x or p1.y > p2.y: return cls.from_to(p2, p1)
         assert False
-    
-    @property_cache
+    @classmethod
+    def untidy(cls, p1: point, p2: point):
+        if p1.x < p2.x or p1.y < p2.y: return cls(p1, p2)
+        if p1.x > p2.x or p1.y > p2.y: return cls(p2, p1)
+        assert False
+    # endregion
+
+    @property
     def draw_offset(self):
         if self.type == 'simple': return (0, 0)
         if point(self.pos1).near_line_is_simple() == []:
             return (0, 0)
         return (LINE_WIDTH, 0) if self.horizonal else (0, LINE_WIDTH)
-    @property # never cache this!
-    def progress_offset(self):
-        return tuple_sum(((self.draw_progress, 0) \
-                          if self.horizonal       \
-                          else (0, self.draw_progress)), 
-                         self.draw_offset)
     def draw(self, surface):
         draw_line(surface, line_color[self.type], 
                   p2vpo(self.pos1, self.draw_offset).to_tuple(), 
                   p2vpo(self.pos2).to_tuple(),
                   LINE_WIDTH, self.horizonal)
-        if self.draw_progress == 0: 
-            assert p2vpo(self.pos1, self.draw_offset).to_tuple() == p2vpo(self.pos1, self.progress_offset).to_tuple()
-            return
-        draw_line(surface, line_color['draw'], 
-                  p2vpo(self.pos1, self.draw_offset).to_tuple(), 
-                  p2vpo(self.pos1, self.progress_offset).to_tuple(),
-                  LINE_WIDTH, self.horizonal)
-        print(self, self.draw_progress, p2vpo(self.pos1, self.draw_offset).to_tuple(), p2vpo(self.pos1, self.progress_offset).to_tuple())
+        self.draw_draw_progress(surface)
     def draw_by(self, color, surface):
         assert False
         draw_line(surface, color, 
@@ -237,44 +268,43 @@ class line:
     def set_type(self, type): self.type = type
     def __repr__(self): return self.id+('T' if self.exist else 'F')
     def __getnewargs__(self): return (self.p1, self.p2)
+    
+    def draw_draw_progress(self, surface):
+        if self.draw_progress.progress == view_vec(0, 0): return
+        assert self.draw_progress.progress.x == 0 or self.draw_progress.progress.y == 0
+        # self.draw_progress = self.area if self.draw_progress.length > self.area.length else self.draw_progress
+        # print(Fore.BLUE+repr(self)+' '+repr(self.draw_progress)+Fore.RESET)
+        p1, p2 = self.draw_progress.to_linese(p2vpo(self.pos1, self.draw_offset), self.area)
+        draw_line(surface, line_color['draw'], 
+                p1.to_tuple(), 
+                p2.to_tuple(),
+                LINE_WIDTH, self.horizonal)
+            
     @classmethod
-    def clear_progress(cls):
+    def clear_all_progress(cls):
         for l in all_line:
             all_line[l].draw_progress = 0
-    def right_is_end(self):
-        if self.pos2 == point_end:
-            return True
-        return False
-    def set_progress(self, 
-                     direction:Literal['up']|Literal['down']|Literal['left']|Literal['right'], 
-                     num) -> Literal[1]|Literal[-1]|Self:
-        if self.type == 'line_cannot_pass': return -1
-        print('SET_PROGRESS add', num, 'to', self.draw_progress, 'of', self, 'direct', direction)
-        self.draw_progress += num
-        if self.draw_progress <= 0:
-            self.draw_progress = 0
-            if direction == 'up':    return self.up_obj
-            if direction == 'down':  return self.down_obj
-            if direction == 'left':  return self.left_obj
-            if direction == 'right': return self.right_obj
-            assert False
-        if self.draw_progress >= unit + LINE_WIDTH:
-            self.draw_progress = unit + LINE_WIDTH
-            if direction == 'up':    return self.up_obj
-            if direction == 'down':  return self.down_obj
-            if direction == 'left':  return self.left_obj
-            if direction == 'right': return self.right_obj
-            assert False
-        return 1
+
+    @property
+    def is_simple_or_has_to_be(self): return self.type == 'simple' or point(self.pos1).near_line_is_simple() == []
+    @property
+    def area(self):
+        return (view_vec(unit+LINE_WIDTH, 0) if self.horizonal else view_vec(0, unit+LINE_WIDTH)) \
+               if self.is_simple_or_has_to_be \
+               else (view_vec(unit, 0) if self.horizonal else view_vec(0, unit)) 
+    def fill(self):
+        self.draw_progress.progress = self.area
+    def clear(self):
+        self.draw_progress.progress = view_vec(0, 0)
 
     #region near
-    @property_cache
+    @property
     def left_obj(self):  return line(self.p1.left_obj,  self.p2.left_obj)
-    @property_cache
+    @property
     def right_obj(self): return line(self.p1.right_obj, self.p2.right_obj)
-    @property_cache
+    @property
     def up_obj(self):    return line(self.p1.up_obj,    self.p2.up_obj)
-    @property_cache
+    @property
     def down_obj(self):  return line(self.p1.down_obj,  self.p2.down_obj)
     #endregion
 all_square:dict[vec2, 'square'] = {}
@@ -290,13 +320,15 @@ class square:
         self.point = point(self.pos)
         self.content: square_content|None = None
         all_square[self.pos] = self
+    def __hash__(self): return hash(self.point)
     @classmethod
     def by_point(cls, p: point):
         if p is None: return None
         return square(p.pos)
     @property
     def line_passed(self) -> int:
-        return self.left_line.exist + self.right_line.exist + self.up_line.exist + self.down_line.exist
+        f = lambda l: not l is None and l.exist
+        return f(self.left_line) + f(self.right_line) + f(self.up_line) + f(self.down_line)
     def __repr__(self): return 'square' + repr(self.point)
     def __getnewargs__(self): return (self.pos, )
     def set_content(self, content: square_content): 
@@ -306,24 +338,24 @@ class square:
             assert False
         self.content = content
     # region part: line
-    @property_cache
+    @property
     def left_line(self): return line(self.point, self.point.down_obj)
-    @property_cache
+    @property
     def right_line(self): return self.left_line.right_obj
-    @property_cache
+    @property
     def up_line(self): return line(self.point, self.point.right_obj)
-    @property_cache
+    @property
     def down_line(self): return self.up_line.down_obj
     # endregion
     
     # region near obj
-    @property_cache
+    @property
     def left_obj(self):  return square.by_point(self.point.left_obj)
-    @property_cache
+    @property
     def right_obj(self): return square.by_point(self.point.right_obj)
-    @property_cache
+    @property
     def up_obj(self):    return square.by_point(self.point.up_obj)
-    @property_cache
+    @property
     def down_obj(self):  return square.by_point(self.point.down_obj)
     #endregion
 
@@ -347,8 +379,6 @@ class square:
     def clear(cls): global all_square; all_square = {}
     @classmethod
     def set(cls, l): global all_square; all_square = l
-    
-
 shapes: List[List[List[int]]] = []
 for s in config_shapes:
     l = []
@@ -549,24 +579,6 @@ puzzle_draw: dict[content_type, Callable[[Any, square, pygame.surface.Surface], 
     SU: SU_draw,
     SR: SR_draw
 }
-point_start: vec2 = None
-point_end: vec2 = None
-line_id = str
-puzzle_square_type = dict[vec2, square_content]
-puzzle_line_type = dict[line_id, line_type]
-puzzle_type = tuple[puzzle_square_type, puzzle_line_type]
-last_mouse_pos = view_vec(0, 0)
-def set_by_puzzle(puzzle: puzzle_type, p_start, p_end):
-    'set square and line object by puzzle to draw and sth'
-    global point_start, point_end, last_mouse_pos
-    ps, pl = puzzle
-    for s in ps:
-        square(s).set_content(ps[s])
-    for l in pl:
-        line.by_id(l).set_type(pl[l])
-    point_start = p_start
-    point_end = p_end
-    last_mouse_pos = p2vpo(point_start, (LINE_WIDTH/2, LINE_WIDTH/2))
 def start_point_draw(surface):
     tmp = p2vpo(point_start, (-LINE_WIDTH*special_point_length, 0))
     draw.rect(surface, line_color['line_must_pass'], 
@@ -593,70 +605,60 @@ def main_draw(surface):
                 continue
             puzzle_draw[_content_type](s.content[1], s, surface)
     pygame.display.flip()
+    print(Fore.YELLOW+'l_dprog_log_b')
+    for k in all_line:
+        l = all_line[k]
+        if l.draw_progress.progress.length != 0:
+            print(Fore.RED+repr(l)+'_'+repr(l.draw_progress)+Fore.RESET)
+    print(Fore.YELLOW+'l_dprog_log_e')
 # endregion
-# last_mouse_pos = view_vec(0, 0)
-direction: Literal['horizonal', 'vertical']|None = None
-now_line: line = None
+point_start: vec2 = None
+point_end: vec2 = None
+line_id = str
+puzzle_square_type = dict[vec2, square_content]
+puzzle_line_type = dict[line_id, line_type]
+puzzle_type = tuple[puzzle_square_type, puzzle_line_type]
+rectified_mouse_pos = None
+def set_by_puzzle(puzzle: puzzle_type, p_start, p_end):
+    'set square and line object by puzzle to draw and sth'
+    # global point_start, point_end, decision_pos, now_line, mouse_reset_pos, dcs_point
+    global point_start, point_end, rectified_mouse_pos
+    ps, pl = puzzle
+    for s in ps:
+        square(s).set_content(ps[s])
+    for l in pl:
+        line.by_id(l).set_type(pl[l])
+    point_start = p_start
+    point_end = p_end
+    rectified_mouse_pos = p2vpo(p_start)
+    pygame.mouse.set_pos(rectified_mouse_pos.to_tuple())
+    am.set_dcsp(point(point_start))
+    # now_line = point(point_start).right_line
+    # now_line = point(point_start).right_line
+    # decision_pos = p2vpo(point_start, (LINE_WIDTH/2, LINE_WIDTH/2))
+    # dcs_point = point(point_start)
+    # mouse_reset_pos = decision_pos
+    # print(Back.CYAN+repr(p2vp(vec2(0, 0)))+'\n'+repr(LINE_WIDTH)+' '+repr(unit)+Back.RESET)
 set_visible = pygame.mouse.set_visible
 set_grab = pygame.event.set_grab
 get_grab = pygame.event.get_grab
-psr = lambda: line(point(point_start), point(point_start).right_obj)
-psd = lambda: line(point(point_start), point(point_start).down_obj)
-psu = lambda: line(point(point_start), point(point_start).up_obj)
+
 def on_mouse_move(now_mouse_pos: view_vec):
-    global last_mouse_pos, direction, now_line
-    d = now_mouse_pos - last_mouse_pos
-    if d == view_vec(0, 0): return
-    for p in all_point:
-        if all_point[p].collide(now_mouse_pos): # at turning
-            print('at', p, MMDA, 'slope', d.slope)
-            if d.slope < MMDA: # horizonal
-                last_mouse_pos += view_vec(d.x, 0)
-                direction = 'horizonal'
-                progress = d.x
-                # if now_line is None:
-                now_line = psr()
-                # TODO may(in all probability) clear passed(expected) line!
-                psd().draw_progress = 0
-                psu().draw_progress = 0
-            elif d.slope > (1 / MMDA): # vertical
-                # TODO negitive slope
-                last_mouse_pos += view_vec(0, d.y)
-                direction = 'vertical'
-                progress = d.y
-                # if now_line is None:
-                if progress > 0:
-                    now_line = psd()
-                    psr().draw_progress = 0
-                    psu().draw_progress = 0
-                else:
-                    now_line = psu()
-                    psr().draw_progress = 0
-                    psd().draw_progress = 0
-            else: print('miss', end=''); continue
-            print('prog:', progress, 'd: ', d, 'direction', direction, 'now_line', now_line)
-            break
-    else: # not at turning
-        print('=', end='')
-        if direction == 'horizonal':
-            last_mouse_pos += view_vec(d.x, 0)
-            progress = d.x
-        elif direction == 'vertical':
-            last_mouse_pos += view_vec(0, d.y)
-            progress = d.y
-        else: assert False
-    res = now_line.set_progress(
-        ('up' if progress < 0 else 'down')
-        if direction!='horizonal'
-        else ('left' if progress < 0 else 'right'), 
-        progress
-    )
-    if res == 1: pass# work well
-    elif res == -1: pass# line cannot pass
-    elif res: # line
-        now_line = res
-    else: # not exist
-        if now_line.right_is_end(): return 'END'
+    global rectified_mouse_pos
+    now_line = am.get_nl()
+    if point(now_line.pos1).collide(now_mouse_pos):
+        am.at_turning(point(now_line.pos1), now_mouse_pos, unit)
+    elif point(now_line.pos2).collide(now_mouse_pos):
+        am.at_turning(point(now_line.pos2), now_mouse_pos, unit)
+    prog = am.d2progress(am.rectify(now_mouse_pos))
+    now_line: line = am.get_nl()
+    assert not now_line is None
+    # TODO draw fixed(won't out of area) but nmp may still
+    now_line.draw_progress = prog
+    # now_line.draw_progress = prog if prog <= now_line.area else now_line.area
+    rectified_mouse_pos = now_mouse_pos
+    return 'END' if point(point_end).collide(now_mouse_pos) else None
+
 def event_loop() -> (Literal['EXIT', 'NEXT', 'MOUSE_UNLOCK', 'DRAW_UPDATE'] | None):
     for event in pygame.event.get():
         if event.type == pygame.locals.QUIT:
@@ -670,12 +672,13 @@ def event_loop() -> (Literal['EXIT', 'NEXT', 'MOUSE_UNLOCK', 'DRAW_UPDATE'] | No
                     return 'NEXT'
                 case pygame.locals.K_q:
                     return 'MOUSE_UNLOCK'
+                case pygame.locals.K_r:
+                    return 'RESTART'
         if event.type == pygame.locals.MOUSEMOTION:
             if any(pygame.mouse.get_pressed()):
                 x, y = pygame.mouse.get_pos()
-                on_mouse_move(view_vec(x, y))
-                return 'DRAW_UPDATE'
+                res = on_mouse_move(view_vec(x, y))
+                return 'END' if res == 'END' else 'DRAW_UPDATE'
             # last_mouse_pos = now_mouse_pos
-        pygame.mouse.set_pos(last_mouse_pos)
-
+        pygame.mouse.set_pos(rectified_mouse_pos.to_tuple())
 # loop()
