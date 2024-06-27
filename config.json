@@ -26,8 +26,9 @@
     "a_max": 8,
     "a_min": 5,
     "seed_mix_method": "XOR",
-    "tick_rate": 30,
-    "puzzle_square_proportion": 0.5,
+    "tick_rate": 60,
+    "puzzle_square_proportion_min": 0.3,
+    "puzzle_square_proportion_max": 0.5,
     "puzzle_line_proportion_min": 0.1,
     "puzzle_line_proportion_max": 0.3,
     "start|end_point_length": 2,
@@ -42,7 +43,7 @@
     "icon_shape_unrotatable_color": [176, 229, 237],
     "icon_shape_rotatable_angle": 10,
     "log_max_line_count": 300,
-    "mouse_collide_radius": 0.2,
+    "mouse_collide_radius": 0.25,
     "mouse_movement_deciding_angle": 30,
-    "once_available_max_mouse_move": 0.05
+    "once_available_max_mouse_move": 0.15
 }

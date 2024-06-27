@@ -1,0 +1,16 @@
+{
+    "test_arg": "test_arg",
+    "test_res": "test_res",
+    "example": ["file_name", "function|class_name"],
+
+    "puzzle_size_path_init": ["puzzle_size_path_init", "init"],
+
+    "number_of_line_pass_by": ["number_of_line_pass_by", "LPN"],
+    "part_index": ["part_index", "PI"],
+    "shapes": ["shapes", "shapes"],
+    "square_poss": ["number_of_line_pass_by", "part_index", "shapes"],
+
+    "line_must_pass": ["line_must_pass", "line_must_pass"],
+    "line_cannot_pass": ["line_cannot_pass", "line_cannot_pass"],
+    "line_poss": ["line_must_pass", "line_cannot_pass"]
+}

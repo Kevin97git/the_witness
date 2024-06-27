@@ -8,6 +8,8 @@ import os
 import shutil
 from itertools import repeat, takewhile
 workdir = os.path.abspath('.')
+
+
 def repr_frame(f: FrameType):
     tmp = f.f_code.co_filename.replace(workdir, '.', 1)
     return f'file: {tmp}, line {f.f_lineno}, in {f.f_code.co_name}'
@@ -22,7 +24,10 @@ def get_stack_slice():
         res.append(frame)
     return res[2:]
 def call_process(): return current_process().name
+
 def raise_error(error: str):
+    # TODO
+    print(error)
     assert False
     with open('./log.txt', 'a') as f:
         f.write('[' + str(datetime.now())+ ']Error: ' + error + '\n')
@@ -35,6 +40,7 @@ def log(s: str):
         f.write('[' + str(datetime.now())+ '][process: ' + call_process() +\
                 ']Message: ' + s + '\n')
         # f.write('    '+repr_stack(get_stack_slice())+'\n')
+
 
 def get_config():
     try:
@@ -83,6 +89,13 @@ def set_key_val(key:str, value):
     save_ = get_save()
     save_[key] = value
     save(save_)
+
+    
+import puzzle_items.basic as basic
+basic.set_raise_error(raise_error)
+basic.set_config(get_config())
+
+
 def clear(max):
     with open('./log.txt') as f:
         buff_generate = takewhile(lambda x: x, (f.read(1024*1024) for _ in repeat(0)))

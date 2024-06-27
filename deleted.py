@@ -782,4 +782,113 @@
     # @property
     # def process_unit(self):
     #     return view_vec(1, 0) if self.horizonal else view_vec(0, 1)
+'set by puzzle'
+
+    # now_line = point(point_start).right_line
+    # now_line = point(point_start).right_line
+    # decision_pos = p2vpo(point_start, (LINE_WIDTH/2, LINE_WIDTH/2))
+    # dcs_point = point(point_start)
+    # mouse_reset_pos = decision_pos
+    # print(Back.CYAN+repr(p2vp(vec2(0, 0)))+'\n'+repr(LINE_WIDTH)+' '+repr(unit)+Back.RESET)
+
+'main'
+    # add probabilities: LPN
+
+    # a = randint(A_MIN, A_MAX)
+    # set_a(a)
+    # square.set_by_a(a)
+    # rand important point
+    # point_start   = point(vec2(0, randint(0, a)))
+    # point_end     = point(vec2(a, randint(0, a)))
+    # turning_point = [ point(vec2(i, randint(0, a))).on() for i in range(a) ]
+    # assert not (point_start is None or point_end is None or None in turning_point)
+    # point_start.on()
+    # point_end.on()
+
+    # # connect them
+    # last = point_start
+    # for p in turning_point:
+    #     if p != last: line.from_to_untidy(p, last)
+    #     last = p.right_obj
+    #     line(p, last).on()
+    # if last != point_end: line.from_to_untidy(last, point_end)
     
+    # # sidesway
+    # for l in copy(list(line.all().values())): path_sidesway(l)
+
+    
+    # add probabilities: LPN
+    # for s in cpy_asv:
+    #     t = s.line_passed
+    #     if t == 0:
+    #         probabilities[s.pos].append((LPN, t))
+    #     probabilities[s.pos] = [] if t == 0 else [(LPN, t)]
+
+    
+    # # add probabilities: PI
+    # for ind, p in enumerate(parts):
+    #     for e in p:
+    #         if ind < len(PI_color): # TODO just for color but need shuffling
+    #             probabilities[e.pos].append((PI, ind))
+    #     g = grid(p)
+    #     sub_pro: list[match_item_type] = match(g)
+
+    #     if sub_pro != []:
+    #         print(sub_pro)
+    #         tmp = []
+    #         for i in sub_pro:
+    #             _once = once(i[:2])
+    #             tmp.append((SU, _once))
+    #             tmp.append((SR, _once))
+                
+    #         for squ in p: probabilities[squ.pos] += tmp
+
+
+    
+        # T, V = tmp
+        # if T == SU:
+        #     V.use()# v.obj: tuple[shape, vec2]
+        #     res[k] = (T, V.obj[0])
+        # elif T == SR:
+        #     V.use()
+        #     res[k] = (T, shape(V.obj[0].pattern, randint(0, 3)))
+        # else:
+        #     res[k] = (T, V)
+
+
+
+
+
+        
+    # on_num = randint(0, puzzle_line_num) # get lmp num
+    # off_num = puzzle_line_num - on_num   # get lcnp nu,
+    # on, off = line.classify()
+    # on = sample(on, min(on_num, len(on)))
+    # off = sample(off, min(off_num, len(off)))
+
+
+# def list_compare(x:square, y:square):
+#     if x.pos.y > y.pos.y: return 1
+#     elif x.pos.y < y.pos.y: return -1
+#     else:
+#         if x.pos.x > y.pos.x: return 1
+#         else: return -1
+
+'TODO runner'
+
+    # cmdl = []
+    # with open('./TODO', 'r') as f:
+    #     while (cmd := f.readlines()) != '' and len(cmdl) < CMDRM:
+    #         cmdl.append(cmd)
+    # for cmd in cmdl: # TODO TODO TODO TODO
+    #     if cmd == []: continue
+    #     args = cmd[1:]
+    #     cmd = cmd[0]
+    #     argnum = len(cmd[1:])
+    #     match cmd[0]:
+    #         case 'RESET':
+    #             if argnum != 2: raise_error(f'run RESET command, expect 2 args but {argnum} were given')
+    #             new_puzzle_by(seed1=argnum[0], seed2=argnum[1])
+    #         case _:
+    #             pass
+    # print('cmd run end')
