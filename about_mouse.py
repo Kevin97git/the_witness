@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Iterable
+from typing import Any, Iterable
 from math import hypot
 
 from constant_type import *
@@ -67,7 +67,6 @@ def available(point, horizonalon, positiveon):
     )
 def drawed_and_not_from_here(point, horizonalon, positiveon):
     target = near_line(point, horizonalon, positiveon)
-    # print('danfh' if (target.draw_progress != view_pos(0, 0) and (target.draw_progress.positive != positiveon)) else 'ndanfh', target)
     print('danfh' if target.draw_progress.progress != view_pos(0, 0) and (target.draw_progress.dcsp != point) else 'ndanfh', target)
     return target.draw_progress.progress != view_pos(0, 0) and (target.draw_progress.dcsp != point)
 danfh = drawed_and_not_from_here
@@ -76,8 +75,7 @@ class draw_progress:
         self.dcsp = dcsp
         self.progress = prg
     @classmethod
-    def null(cls):
-        return draw_progress(None, view_pos(0, 0))
+    def null(cls): return draw_progress(None, view_pos(0, 0))
     def __repr__(self) -> str:
         return 'dprog_frm'+repr(self.dcsp)+'val'+repr(self.progress)
     def __eq__(self, oth: object) -> bool:
@@ -88,7 +86,7 @@ class draw_progress:
     def to_linese(self, draw_ps, area):
         '(draw_simply_start, area) => line_draw_p1, line_draw_p2'
         if self.progress.positive:
-            return (draw_ps, draw_ps + self.progress)# TODO I'm not sure
+            return (draw_ps, draw_ps + self.progress)# WARNING I'm not sure
         else:
             return (draw_ps + area + self.progress, draw_ps + area)
 def set_p2vpo(_p2vpo): global p2vpo; p2vpo = _p2vpo
@@ -131,18 +129,19 @@ def fill_an(turning, horizonalon, positiveon, unit):
     print('fillan', horizonalon, positiveon)
     l = turning.near_line()
     l.remove(near_line(turning, horizonalon, positiveon))
-    # l = [e for e in l if e and abs(e.draw_progress.length) >= e.area.length - MCR * unit - OAMMM * unit]
     for e in l:
         if e is None: continue
         if e.draw_progress.dcsp == turning: e.clear()
-        if e.draw_progress.progress.length >= e.area.length - MCR * unit - 2*OAMMM * unit:
-            if e.draw_progress.progress == e.area: continue
-            print('fill(l, prog, area, proglen, dcslen)', e, e.draw_progress.progress, e.area, e.draw_progress.progress.length, e.area.length - MCR * unit - 2*OAMMM * unit)
+        if e.draw_progress.progress != view_pos(0, 0):
+            print('fill', e)
             e.fill()
-            # print('aft fill', e.draw_progress.progress)
-        elif e.draw_progress.progress.length != 0:
-            print('clear(l, prog, area, proglen, dcslen)', e, e.draw_progress.progress, e.area, e.draw_progress.progress.length, e.area.length - MCR * unit - 2*OAMMM * unit)
-            e.clear()
+        # if e.draw_progress.progress.length >= e.area.length - MCR * unit - 2*OAMMM * unit:
+        #     if e.draw_progress.progress == e.area: continue
+        #     print('fill(l, prog, area, proglen, dcslen)', e, e.draw_progress.progress, e.area, e.draw_progress.progress.length, e.area.length - MCR * unit - 2*OAMMM * unit)
+        #     e.fill()
+        # elif e.draw_progress.progress.length != 0:
+        #     print('clear(l, prog, area, proglen, dcslen)', e, e.draw_progress.progress, e.area, e.draw_progress.progress.length, e.area.length - MCR * unit - 2*OAMMM * unit)
+        #     e.clear() 
     print('fillane')
 def at_turning(turning, nmp, unit, _d):
     '''
@@ -168,8 +167,6 @@ def at_turning(turning, nmp, unit, _d):
         if available(turning, True, _d.positive):
             _danfh = danfh(turning, True, _d.positive)
             set_state(turning, _danfh, True, _d.positive)
-            # TODO TRY
-            # if not _danfh: fill_an(turning, True, d.positive, unit)
             fill_an(turning, True, _d.positive, unit)
     elif vv_vertical(d):
         _d.x = 0
@@ -177,9 +174,7 @@ def at_turning(turning, nmp, unit, _d):
         if available(turning, False, _d.positive):
             _danfh = danfh(turning, False, _d.positive)
             set_state(turning, _danfh, False, _d.positive)
-            # TODO TRY
-            # if not _danfh: fill_an(turning, False, d.positive, unit)
+            # WARNING someone is trying to use _d instead of d, it's not sure that it will work well
             fill_an(turning, False, _d.positive, unit)
     state['direction'] = state['direction'] if 'direction' in state else 'unavailable'
-    # print('state', state)
 def d2progress(d): return draw_progress(state['dcsp'], d) # well, I'm serious

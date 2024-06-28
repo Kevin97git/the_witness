@@ -1,7 +1,6 @@
 from . import basic
 from .basic import square, config, p2vpo, draw_radius_border_rect
 class PI(basic.poss_cls_sq):
-    # PI_color = config["part_mark_color"]
     PI_color = config.PI_color
     name = 'part_index'
     cache = {} # key: val; val: npi
@@ -9,7 +8,6 @@ class PI(basic.poss_cls_sq):
         self.val = val
     @classmethod
     def update_poss(cls, rand, all_sq: list, parts, possibilities: dict):
-        # print(list(range(len(parts))), len(cls.PI_color))
         able_ind = rand.sample(list(range(len(parts))), min(len(parts), len(cls.PI_color)))
         for ind, p in enumerate(parts):
             for e in p:

@@ -5,7 +5,6 @@ from numpy import ndarray
 from copy import copy
 from pygame import gfxdraw, draw
 list_shapes: list[list[list[int]]] = []
-# config_shapes: list[str] = config["shapes"]
 config_shapes: list[str] = config.shapes
 # init
 for s in config_shapes:
@@ -20,7 +19,6 @@ for s in config_shapes:
     list_shapes.append(np.array(l))
 global_rand = None
     
-# rotate = lambda l:np.array([[l[-j-1, i] for j in range(l.shape[0])] for i in range(l.shape[1])])
 rotate = lambda a:a.transpose()[::-1]
 class shape:
     @classmethod
@@ -192,11 +190,9 @@ class shapes:
         self.collapsed = True
         self.val.use()
         if self.name == shapes.name1: # SU
-            # return _shapes('shape_unrotatable', self.val)
             self.val = self.val.obj[0]
             return self
         else: # name2: SR
-            # return _shapes('shape_rotatable', shape(self.val.obj[0].pattern, rand.randint(0, 3))) # TODO get poss from config
             self.val = shape(self.val.obj[0].pattern, rand.randint(0, 3))
             return self
     def draw(self, s, unit, surface):
@@ -247,7 +243,7 @@ class shapes:
                             u-d))
     def __repr__(self): return f'{self.name}|{self.val}'
     def check(self, parts, sq):
-        cse.log(f'cache: {shapes.cache}')
+        # cse.log(f'cache: {shapes.cache}')
         if self.name == shapes.name1: return self.SU_check(parts, sq)
         elif self.name == shapes.name2: return self.SR_check(parts, sq)
         else: assert False
@@ -260,15 +256,15 @@ class shapes:
             g = grid(parts[part_index])
             poss = g.match(self.val)[0]
             if poss[0] == []: return False
-            shapes.cache[part_index] = [[self.val, [e[0][2] for e in poss if e != []]]] # [[shape, [the grid after putting the shape]]]
+            shapes.cache[part_index] = [e[0][2] for e in poss if e != []] # [[shape, [the grid after putting the shape]]]
         else:
-            possible_g = shapes.cache[part_index][-1]
+            possible_g = shapes.cache[part_index]
             gs = [] # to add into list
             for g in possible_g:
                 poss = g.match(self.val)[0]
                 gs += [e[0][2] for e in poss if e != []]
             if gs == []: return False
-            shapes.cache[part_index].append([self.val, gs])
+            shapes.cache[part_index] = gs
         return True
     def SR_check(self, parts, sq):
         for i, _part in enumerate(parts):
@@ -297,4 +293,3 @@ class shapes:
         return True
     @classmethod
     def prepare_to_check(cls): cls.cache = {}
-    # TODO else funciton raise error

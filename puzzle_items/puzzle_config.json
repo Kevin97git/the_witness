@@ -5,6 +5,8 @@
 
     "puzzle_size_path_init": ["puzzle_size_path_init", "init"],
 
+    "seed_mixer": ["seed_mixer", "connect"],
+
     "number_of_line_pass_by": ["number_of_line_pass_by", "LPN"],
     "part_index": ["part_index", "PI"],
     "shapes": ["shapes", "shapes"],

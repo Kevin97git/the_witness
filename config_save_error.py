@@ -39,7 +39,6 @@ def log(s: str):
     with open('./log.txt', 'a') as f:
         f.write('[' + str(datetime.now())+ '][process: ' + call_process() +\
                 ']Message: ' + s + '\n')
-        # f.write('    '+repr_stack(get_stack_slice())+'\n')
 
 
 def get_config():

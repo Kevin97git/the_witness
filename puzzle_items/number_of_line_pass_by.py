@@ -8,7 +8,7 @@ class LPN(basic.poss_cls_sq):
     def update_poss(cls, rand, all_sq: list, parts, possibilities: dict):
         for s in all_sq:
             t = s.line_passed
-            if t == 0:
+            if t != 0:
                 possibilities[s.pos].append(cls(t))
     @property
     def available(self):
@@ -21,10 +21,7 @@ class LPN(basic.poss_cls_sq):
         SSN = config.SSN
         LPN_color = config.LPN_color
         IIDLPN = config.IIDLPN
-        # scale_surface.fill(BGC)
         O = p2vp(s.pos)
-        # O = view_pos(0, 0)
-        # scaler = 10000 / unit
         scaler = 1
         u = unit / SSN * scaler
         d = IIDLPN * unit * scaler

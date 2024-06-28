@@ -1,20 +1,14 @@
 from random import randint, Random
 from copy import copy
-# from functools import cmp_to_key, lru_cache
-# from itertools import groupby
-# from sys import _getframe
 from colorama import Fore, init
 init(True)
 import multiprocessing as mp
 from multiprocessing import Pipe
 from multiprocessing.connection import PipeConnection
 import asyncio
-import pprint
-from typing import Literal
-import numpy as np
 
 from paint_classes import (point, line, square, pos2, 
-                           set_a, event_loop, main_draw, set_by_puzzle, get_surface, set_caption,
+                           set_a, event_loop, main_draw, set_by_puzzle, reset_by_nothing, get_surface, set_caption,
                            set_visible, set_grab, get_grab,
                            main_clock)
 from config_save_error import raise_error, log, get_key_val, set_key_val
@@ -31,7 +25,6 @@ puzzle_line_type = dict[line_id, cse.basic.poss_cls_l]
 puzzle_type = tuple[puzzle_square_type, puzzle_line_type]
 # endregion
 def get_parts(squares: list[square]):
-    # print('begin squares', squares)
     parts: list[list[square]] = []
     while len(squares) != 0:
         s: square = squares[0]
@@ -47,9 +40,7 @@ def get_parts(squares: list[square]):
             i = 0
         
         for e in n:
-            # if not e in squares: print(e); print(squares)
             squares.remove(e)
-        # n.sort(key=cmp_to_key(list_compare))
         parts.append(n)
     return parts
 def get_parts_for_check(squares: list[square]):
@@ -70,20 +61,12 @@ def get_parts_for_check(squares: list[square]):
             squares.remove(e)
         parts.append(n)
     return parts
-def print_parts(parts, a):
-    for y in range(a):
-        string = ''
-        for x in range(a):
-            for ind, sl in enumerate(parts):
-                if square(pos2(x, y)) in sl:
-                    string += str(ind)
-        print(' '.join(string))
+
 def choice_sq_possibilities(rand, possibilities: puzzle_square_type, a:int) -> puzzle_square_type:
     # TODO upside down Y
     keys = list(possibilities.keys()) # get each square
     res: puzzle_square_type = {}
     rand.shuffle(keys)
-    # keys = keys[int(a * a * PSP):]
     keys = keys[:rand.randint(int(a * a * PSPI), int(a * a * PSPA))]
     for k in keys:
         # V: once(obj: tuple[shape, pos2])
@@ -107,6 +90,7 @@ def choice_l_possibilities(rand, possibilities:dict, a:int) -> puzzle_line_type:
     return res
         
 puzzle_size_path_init = puzzle_module_load_func('puzzle_size_path_init')
+seed_mixer = puzzle_module_load_func('seed_mixer')
 square_poss_cls:list[cse.basic.poss_cls_sq] = []
 for cls_name in cse.basic.square_poss:
     square_poss_cls.append(puzzle_module_load_cls(cls_name))
@@ -115,9 +99,8 @@ for cls_name in cse.basic.line_poss:
     line_poss_cls.append(puzzle_module_load_cls(cls_name))
 def _reset(seed1: int, seed2: int) -> tuple[puzzle_type, int, pos2, pos2]:
     square_possibilities:puzzle_square_type = {}
-    # seed(SMM(seed1, seed2)) # TODO mod loader
-    rand = Random(SMM(seed1, seed2)) # TODO mod loader
-    log(f'reset: seed1={seed1}, seed2={seed2}, mix={SMM(seed1, seed2)}')
+    rand = Random(seed_mixer(seed1, seed2))
+    log(f'reset: seed1={seed1}, seed2={seed2}, mix={seed_mixer(seed1, seed2)}')
     a = puzzle_size_path_init(rand)
 
     # possibilities init here, each of them are list
@@ -125,7 +108,6 @@ def _reset(seed1: int, seed2: int) -> tuple[puzzle_type, int, pos2, pos2]:
     for s in cpy_asv: square_possibilities[s.pos] = []
     
     # get parts
-    # cpy_asv = copy(list(square.all().values()))
     parts = get_parts(squares=cpy_asv)
     print(Fore.BLUE + 'parts_num: ' + str(len(parts)))
 
@@ -135,7 +117,6 @@ def _reset(seed1: int, seed2: int) -> tuple[puzzle_type, int, pos2, pos2]:
     log('poss: '+repr(square_possibilities))
     puzzle_square = choice_sq_possibilities(rand, square_possibilities, a=a)
     print(puzzle_square)
-    # puzzle_lines = rand.sample(copy(line.all().values()), puzzle_line_num)
     cpy_alv = copy(list(line.all().values()))
     line_possibilities = {}
     for l in cpy_alv:
@@ -143,13 +124,7 @@ def _reset(seed1: int, seed2: int) -> tuple[puzzle_type, int, pos2, pos2]:
     for poss_cls in line_poss_cls:
         poss_cls.update_poss(rand, cpy_alv, line_possibilities)
     puzzle_line = choice_l_possibilities(rand, line_possibilities, a)
-    # splited_lines = split_sequence(rand, puzzle_lines, 2)
-    # line_cls = [LMP, LCP]
-    # for el, _cls in zip(splited_lines, line_cls):
-    #     for k in el:
-    #         puzzle_line[k.id] = _cls()
     puzzle: puzzle_type = (puzzle_square, puzzle_line)
-    # TODO CHECK
     square.clear()
     line.clear_alll()
     point.clear()
@@ -172,16 +147,9 @@ def call_reset(puzzle_pipe:PipeConnection, timeout=None):
             seed1, seed2 = message
             print('call reset:reset begin')
             res = asyncio.run(reset())
-            # print('call reset:reset end', res)
             print('call reset:reset end')
             puzzle_pipe.send(res)
-            # recieve at 412 then to 382
             print('call reset:send end')
-        # elif type(message) == str:
-        #     match message:
-        #         case 'EXIT':
-        #             pipe.send('Function Return')
-        #             return
 def check_answer(puzzle: puzzle_type, a) -> bool:
     cse.basic.cache.a = a
     puzzle_square, puzzle_line = puzzle
@@ -206,12 +174,11 @@ def game_loop(puzzle: puzzle_type, a: int, p_start:pos2, p_end:pos2, surface):
     square.clear()
     line.clear_alll()
     point.clear()
-    # print(puzzle, a, p_start, p_end)
     square.set_by_a(a)
     print(puzzle[0])
     set_by_puzzle(puzzle, p_start, p_end)
     main_draw(surface)
-    while True: # TODO
+    while True:
         cmd = event_loop()
         match cmd:
             case 'END_CHECK':
@@ -219,8 +186,10 @@ def game_loop(puzzle: puzzle_type, a: int, p_start:pos2, p_end:pos2, surface):
                 if correcton:
                     return 'NEXT'
                 line.clear_all_progress()
+                point.clear_passed()
+                reset_by_nothing()
             case 'EXIT'|'NEXT'|'RESTART': return cmd
-            case 'MOUSE_UNLOCK':
+            case 'MOUSE_LOCK_SWITCH':
                 if get_grab():
                     set_visible(True)
                     set_grab(False)
@@ -237,7 +206,6 @@ if __name__ == '__main__':
     print('__main__')
     log('start')
     prs_puzzle_pipe_main, prs_puzzle_pipe_sub = Pipe()
-    # prs_list_pipe_main, prs_list_pipe_sub = Pipe()
     prs = mp.Process(target=call_reset, args=(prs_puzzle_pipe_sub, PGT), name='prs')
     prs.start()
     main_surface = get_surface()
@@ -249,7 +217,7 @@ if __name__ == '__main__':
         log('set visible=False, grab=True')
         prs_puzzle_pipe_main.send((seed1, seed2))
         print('main: send end')
-        while True: # TODO
+        while True:
             res: tuple[puzzle_type, int, pos2, pos2]|None = prs_puzzle_pipe_main.recv()
             if res: 
                 seed2 += 1
@@ -268,18 +236,20 @@ if __name__ == '__main__':
                 seed2 += 1
                 print('timeout')
                 prs_puzzle_pipe_main.send((seed1, seed2))
-                # prs.join(PGT+1)
             set_key_val('seed2', seed2)
     seed1 = get_key_val('seed1')
     if seed1 == -1:
-        seed1 = randint()
+        seed1 = randint(0, 10**10)
         set_key_val('seed1', seed1)
     seed2 = get_key_val('seed2')
+    if seed2 == -1:
+        seed2 = randint(0, 10**10)
+        set_key_val('seed2', seed2)
     res = True
     while res:
         res = new_puzzle_by(seed1=seed1, seed2=seed2, prs=prs, surface=main_surface)
-    # seed2 += 1
-    # set_key_val('seed2', seed2)
+    seed2 += 1
+    set_key_val('seed2', seed2)
 '''
 start.
 check command.

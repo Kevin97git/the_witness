@@ -40,8 +40,40 @@ def path_sidesway(l, rand): # l: line
                 continue
             else: break
         return False
+def intersection(a:list, b:list):
+    return list(set(a).intersection(set(b)))
+def sub(a:list, b:list):
+    return list(set(a)-set(b))
+def way_log_info(ps, pe):
+    ons = []
+    for lid in line.all():
+        l = line.by_id(lid)
+        if l.exist:
+            ons.append(l)
 
-@basic.p_init_f
+    cons = copy(ons)
+    p_passby = []
+    np = ps
+    direction = None
+    while True:
+        nl = intersection(np.near_line(), cons)[0]
+        cons.remove(nl)
+        othp = sub([nl.p1, nl.p2], [np])[0]
+        if np.y == othp.y:
+            if direction != 'vertical':
+                direction = 'vertical'
+                p_passby.append(np)
+        elif np.x == othp.x:
+            if direction != 'horizonal':
+                direction = 'horizonal'
+                p_passby.append(np)
+        if othp == pe:
+            p_passby.append(pe)
+            break
+        np = othp
+
+    return f'{ons}\n{p_passby}'
+    
 def init(rand):
     # init size
     a = rand.randint(A_MIN, A_MAX)
@@ -53,7 +85,7 @@ def init(rand):
     assert not (point_start is None or point_end is None or None in turning_point)
     point_start.on()
     point_end.on()
-    
+    basic.cse.log(f'point_start&end: {point_start}, {point_end}')
     # connect them
     last = point_start
     for p in turning_point:
@@ -63,7 +95,7 @@ def init(rand):
     if last != point_end: line.from_to_untidy(last, point_end)
     # sidesway
     for l in copy(list(line.all().values())): path_sidesway(l, rand)
-
+    basic.cse.log('way: '+way_log_info(point_start, point_end))
     cache.a = a
     cache.point_start = point_start
     cache.point_end   = point_end

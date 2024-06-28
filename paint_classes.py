@@ -138,6 +138,10 @@ class point:
     def clear(cls): global all_point; all_point = {}
     @classmethod
     def set(cls, l): global all_point; all_point = l
+    @classmethod
+    def clear_passed(cls):
+        for p in all_point:
+            point(p).off()
     def to_end(self): return self.pos == point_end
     def collide(self, pos: view_pos):
         d = p2vp(self.pos) - pos
@@ -171,7 +175,6 @@ class point:
         if self.passed:
             print(Fore.GREEN+f'point|{self}:passed'+Fore.RESET)
             viewp = p2vpo(self.pos)
-            # draw.rect(surface, (0, 0, 0), (viewp.x, viewp.y, LINE_WIDTH, LINE_WIDTH))
             draw.rect(surface, line_color['draw'], (viewp.x, viewp.y, LINE_WIDTH, LINE_WIDTH))
 class _simple:
     def __init__(self):
@@ -208,7 +211,6 @@ class line:
     # region magic
     def __hash__(self): return hash(self.id)
     def __eq__(self, oth): return isinstance(oth, line) and self.id == oth.id
-    # def __repr__(self): return self.id+('T' if self.exist else 'F')+('t' if self.is_on() else 'f')
     def __repr__(self): return self.id+('T' if self.exist else 'F')
     def __getnewargs__(self): return (self.p1, self.p2)
     # endregion
@@ -219,14 +221,6 @@ class line:
     def clear_alll(cls): global all_line; all_line = {}
     @classmethod
     def set(cls, l): global all_line; all_line = l
-    # @classmethod
-    # def classify(cls):
-    #     on: list[Self] = []
-    #     off: list[Self] = []
-    #     for k in all_line:
-    #         if all_line[k].exist: on.append(all_line[k])
-    #         else: off.append(all_line[k])
-    #     return on, off
     @classmethod
     def from_to(cls, p1: point, p2: point):
         if p1.x == p2.x:
@@ -285,13 +279,12 @@ class line:
         if self.draw_progress.progress == self.area: self.fill()
         assert self.draw_progress.progress.x == 0 or self.draw_progress.progress.y == 0
         # self.draw_progress = self.area if self.draw_progress.length > self.area.length else self.draw_progress
-        # print(Fore.BLUE+repr(self)+' '+repr(self.draw_progress)+Fore.RESET)
+        print(Fore.BLUE+repr(self)+' '+repr(self.draw_progress)+Fore.RESET)
         p1, p2 = self.draw_progress.to_linese(p2vpo(self.pos1, self.draw_offset), self.area)
         draw_line(surface, line_color['draw'], 
                 p1.to_tuple(), 
                 p2.to_tuple(),
                 LINE_WIDTH, self.horizonal)
-        # self.draw_progress.dcsp.draw(surface)
     @classmethod
     def clear_all_progress(cls):
         for l in all_line:
@@ -305,9 +298,6 @@ class line:
         return (view_pos(unit+LINE_WIDTH, 0) if self.horizonal else view_pos(0, unit+LINE_WIDTH)) \
                if self.is_simple_or_has_to_be \
                else (view_pos(unit, 0) if self.horizonal else view_pos(0, unit)) 
-    # @property
-    # def area(self):
-    #     return (view_pos(unit+LINE_WIDTH, 0) if self.horizonal else view_pos(0, unit+LINE_WIDTH))
     def fill(self):
         self.draw_progress.progress = self.area
         self.exist = True
@@ -352,10 +342,6 @@ class square:
     def __repr__(self): return 'square' + repr(self.point)
     def __getnewargs__(self): return (self.pos, )
     def set_content(self, content: square_content): 
-        # if type(content) != tuple:
-        #     assert False
-        # if not content[0] in (LPN, PI, SU, SR):
-        #     assert False
         self.content = content
     # region part: line
     @property
@@ -415,12 +401,6 @@ def _draw_radius_border_rect(color, pos:view_pos, width, height, surface):
     draw.rect(surface, color, (pos.x, pos.y, width, height), border_radius=RBR)
 
 
-# puzzle_draw: dict[content_type, Callable[[Any, square, pygame.surface.Surface], None]] = {
-#     LPN: LPN_draw,
-#     PI: PI_draw,
-#     SU: SU_draw,
-#     SR: SR_draw
-# }
 def start_point_draw(surface):
     tmp = p2vpo(point_start, (-LINE_WIDTH*special_point_length, 0))
     draw.rect(surface, line_color['line_must_pass'], 
@@ -431,23 +411,15 @@ def end_point_draw(surface):
               (tmp[0], tmp[1], LINE_WIDTH*special_point_length+LINE_WIDTH, LINE_WIDTH))
 def main_draw(surface):
     surface.fill(BGC)
-    # lts = []
     for l in line.all().values():
-        # lts.append(l.type)
         l.draw(surface)
     start_point_draw(surface)
     end_point_draw(surface)
     for k in all_square:
         s = all_square[k]
         if s.content:
-            # _content_type:cse.basic.poss_cls_sq = s.content[0]
             _content_type:cse.basic.poss_cls_sq = s.content
             _content_type.draw(s, unit, surface)
-            # print(_content_type)
-            # if not _content_type in puzzle_draw:
-                # print('-_-continue')
-                # continue
-            # puzzle_draw[_content_type](s.content[1], s, surface)
     pygame.display.flip()
     print(Fore.YELLOW+'l_dprog_log_b')
     for k in all_line:
@@ -465,8 +437,7 @@ puzzle_type = tuple[puzzle_square_type, puzzle_line_type]
 rectified_mouse_pos = None
 def set_by_puzzle(puzzle: puzzle_type, p_start, p_end):
     'set square and line object by puzzle to draw and sth'
-    # global point_start, point_end, decision_pos, now_line, mouse_reset_pos, dcs_point
-    global point_start, point_end, rectified_mouse_pos, last_mouse_pos
+    global point_start, point_end, rectified_mouse_pos
     ps, pl = puzzle
     for s in ps:
         square(s).set_content(ps[s])
@@ -477,6 +448,12 @@ def set_by_puzzle(puzzle: puzzle_type, p_start, p_end):
     rectified_mouse_pos = p2vpo(p_start)
     pygame.mouse.set_pos(rectified_mouse_pos.to_tuple())
     am.set_dcsp(point(point_start))
+def reset_by_nothing():
+    global rectified_mouse_pos
+    rectified_mouse_pos = p2vpo(point_start)
+    pygame.mouse.set_pos(rectified_mouse_pos.to_tuple())
+    am.set_dcsp(point(point_start))
+
 set_visible = pygame.mouse.set_visible
 set_grab = pygame.event.set_grab
 get_grab = pygame.event.get_grab
@@ -484,8 +461,6 @@ get_grab = pygame.event.get_grab
 def on_mouse_move(now_mouse_pos: view_pos):
     global rectified_mouse_pos
     now_line = am.get_nl()
-    # TODO this may allow mouse get out of max movement, 
-    # check it, like nmp = max(vec(nmp), vec(nmp)^0 * |max_movement|)
     print('on_mouse_move(nmp, rmp, dcsp, check_end)', 
           now_mouse_pos, 
           rectified_mouse_pos,
@@ -501,38 +476,40 @@ def on_mouse_move(now_mouse_pos: view_pos):
     prog = am.d2progress(am.rectify(now_mouse_pos))
     now_line: line = am.get_nl()
     assert not now_line is None
-    # TODO draw fixed(won't out of area) but nmp may still | maybe fixed?
     now_line.draw_progress = prog
-    # now_line.draw_progress = prog if prog <= now_line.area else now_line.area
     rectified_mouse_pos = now_mouse_pos
     if point(point_end).collide(now_mouse_pos):
         am.state['now_line'].fill()
         return 'END'
 
-def event_loop() -> (Literal['EXIT', 'NEXT', 'MOUSE_UNLOCK', 'DRAW_UPDATE'] | None):
+def event_loop() -> (Literal['EXIT', 'NEXT', 'MOUSE_LOCK_SWITCH', 'DRAW_UPDATE'] | None):
     for event in pygame.event.get():
         if event.type == pygame.locals.QUIT:
             return 'EXIT'
         if event.type == pygame.locals.KEYDOWN:
             print('key_down')
             match event.key:
-                case pygame.locals.K_ESCAPE:
+                # case pygame.locals.K_ESCAPE:
+                case key_bound.EXIT:
                     return 'EXIT'
-                case pygame.locals.K_TAB:
+                case key_bound.NEXT:
                     return 'NEXT'
-                case pygame.locals.K_q:
-                    return 'MOUSE_UNLOCK'
-                case pygame.locals.K_r:
-                    return 'RESTART'
+                case key_bound.MOUSE_LOCK_SWITCH:
+                    return 'MOUSE_LOCK_SWITCH'
+                # case pygame.locals.K_r:
+                #     return 'RESTART'
+                case key_bound.CLEAR_PROGRESS: # TODO key bound
+                    line.clear_all_progress()
+                    point.clear_passed()
+                    reset_by_nothing()
+                    return 'DRAW_UPDATE'
         if event.type == pygame.locals.MOUSEMOTION:
             if any(pygame.mouse.get_pressed()):
                 x, y = pygame.mouse.get_pos()
                 res = on_mouse_move(view_pos(x, y))
                 return 'END_CHECK' if res == 'END' else 'DRAW_UPDATE'
-            # last_mouse_pos = now_mouse_pos
         pygame.mouse.set_pos(rectified_mouse_pos.to_tuple())
-# loop()
-
+        
 # about mod loader
 cse.basic.set_5basic_cls(point, line, square, pos2, view_pos)
 cse.basic.set_5basic_func(set_a, p2vp, p2vpo, draw_triangle, _draw_radius_border_rect)
